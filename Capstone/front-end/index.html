@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Knowledge Assistant</title>
+    <style>
+        :root {
+            --bg: #0a0720;
+            --glass: rgba(28, 22, 62, 0.62);
+            --glass-2: rgba(255, 255, 255, 0.06);
+            --border: rgba(167, 139, 250, 0.22);
+            --text: #f1edff;
+            --muted: #a99fd1;
+            --danger: #d9435e;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Inter, system-ui, sans-serif;
+            color: var(--text);
+            min-height: 100vh;
+            padding: 28px 20px;
+            background:
+                radial-gradient(ellipse 60% 45% at 8% 55%, rgba(192, 70, 255, 0.45), transparent 70%),
+                radial-gradient(ellipse 55% 40% at 95% 25%, rgba(124, 58, 237, 0.55), transparent 70%),
+                radial-gradient(ellipse 50% 35% at 70% 100%, rgba(99, 52, 220, 0.35), transparent 70%),
+                var(--bg);
+            background-attachment: fixed;
+        }
+
+        .container { max-width: 1280px; margin: 0 auto; }
+
+        header { text-align: center; margin-bottom: 34px; }
+
+        .title {
+            display: inline-flex; align-items: center; gap: 14px;
+            font-size: 2.4em; font-weight: 700; margin-bottom: 8px;
+        }
+        .title .logo {
+            width: 56px; height: 56px; border-radius: 50%;
+            display: grid; place-items: center;
+            background: radial-gradient(circle at 30% 25%, #c4b5fd, #7c3aed 70%);
+            box-shadow: 0 0 28px rgba(139, 92, 246, 0.7);
+        }
+        .title .logo svg { width: 32px; height: 32px; color: #fff; }
+        .title .text {
+            background: linear-gradient(90deg, #a78bfa, #f0abfc);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .subtitle { color: var(--muted); font-size: 1.05em; }
+
+        .main-content { display: grid; grid-template-columns: 1fr 1.75fr; gap: 24px; }
+
+        .card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 24px;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+
+        .card h2 {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 1.3em; font-weight: 600;
+            margin-bottom: 20px; padding-bottom: 14px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, #6d5ae6, rgba(109,90,230,0.2)) 1;
+        }
+        .card h2 svg { width: 28px; height: 28px; flex: none; }
+
+        .upload-zone {
+            border: 2px dashed rgba(167, 139, 250, 0.45);
+            border-radius: 16px;
+            background: var(--glass-2);
+            padding: 30px 20px;
+            text-align: center; cursor: pointer;
+            transition: all 0.25s; margin-bottom: 18px;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            background: rgba(139, 92, 246, 0.16);
+            border-color: #c4b5fd;
+            box-shadow: 0 0 24px rgba(139, 92, 246, 0.3);
+        }
+        .upload-icon { margin-bottom: 12px; }
+        .upload-icon svg { width: 54px; height: 54px; }
+        .upload-zone .hint { font-size: 0.85em; color: var(--muted); margin-top: 6px; }
+
+        input[type="file"] { display: none; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            background: linear-gradient(135deg, #9a72fb 0%, #6d3df0 100%);
+            color: white; border: none;
+            padding: 12px 26px; border-radius: 999px;
+            cursor: pointer; font-size: 1em; font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 6px 22px rgba(124, 77, 255, 0.5);
+        }
+        .btn svg { width: 18px; height: 18px; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(124, 77, 255, 0.7); }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+        .btn-clear { width: 100%; margin-bottom: 16px; padding: 14px; }
+
+        .documents-list { max-height: 300px; overflow-y: auto; }
+
+        .document-item {
+            display: flex; justify-content: space-between; align-items: center; gap: 10px;
+            padding: 14px; margin-bottom: 10px;
+            background: var(--glass-2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+        .document-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .document-info svg { width: 32px; height: 32px; flex: none; }
+        .document-name { font-weight: 600; font-size: 0.92em; word-break: break-word; }
+        .document-size { font-size: 0.82em; color: var(--muted); margin-top: 2px; }
+        .empty { text-align: center; color: var(--muted); padding: 10px; }
+
+        .delete-btn {
+            background: var(--danger); color: white; border: none;
+            padding: 8px 16px; border-radius: 999px;
+            cursor: pointer; font-size: 0.85em; font-weight: 600; flex: none;
+            transition: filter 0.2s;
+        }
+        .delete-btn:hover { filter: brightness(1.15); }
+
+        .chat-container { height: 540px; display: flex; flex-direction: column; }
+
+        .messages { flex: 1; overflow-y: auto; padding: 6px 10px 6px 0; margin-bottom: 18px; }
+
+        .message { display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-start; }
+        .message.user { flex-direction: row-reverse; }
+
+        .avatar {
+            width: 42px; height: 42px; border-radius: 50%; flex: none;
+            display: grid; place-items: center;
+            background: rgba(139, 92, 246, 0.18);
+            border: 1px solid var(--border);
+        }
+        .avatar svg { width: 24px; height: 24px; color: #c4b5fd; }
+
+        .message-content {
+            max-width: 72%;
+            padding: 14px 18px; border-radius: 16px;
+            line-height: 1.55; white-space: pre-wrap; word-wrap: break-word;
+        }
+        .message.assistant .message-content {
+            background: rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .message.user .message-content {
+            background: linear-gradient(135deg, #7c4dff 0%, #5b2fd6 100%);
+            box-shadow: 0 6px 20px rgba(91, 47, 214, 0.45);
+        }
+
+        .input-area { display: flex; gap: 12px; }
+
+        #questionInput {
+            flex: 1; padding: 15px 22px;
+            background: rgba(10, 7, 32, 0.55);
+            color: var(--text);
+            border: 1.5px solid rgba(139, 92, 246, 0.6);
+            border-radius: 999px; font-size: 1em; outline: none;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        #questionInput::placeholder { color: var(--muted); }
+        #questionInput:focus { border-color: #c4b5fd; box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.22); }
+
+        .loading {
+            display: inline-block; width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,.3); border-radius: 50%;
+            border-top-color: white; animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .status { padding: 10px 14px; border-radius: 12px; margin-bottom: 14px; font-size: 0.9em; }
+        .status.success { background: rgba(34,197,94,0.16); color: #86efac; border: 1px solid rgba(34,197,94,0.35); }
+        .status.error   { background: rgba(244,63,94,0.16); color: #fda4af; border: 1px solid rgba(244,63,94,0.35); }
+        .status.info    { background: rgba(99,102,241,0.18); color: #c7d2fe; border: 1px solid rgba(99,102,241,0.4); }
+
+        .sources {
+            font-size: 0.82em; color: var(--muted);
+            margin-top: 10px; padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.12);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.5); border-radius: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+
+        @media (max-width: 860px) {
+            .main-content { grid-template-columns: 1fr; }
+            .title { font-size: 1.7em; }
+            .message-content { max-width: 85%; }
+        }
+    </style>
+</head>
+<body>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+            <linearGradient id="gPurple" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#6d3df0"/>
+            </linearGradient>
+            <symbol id="i-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 7V4"/><circle cx="12" cy="3.5" r="1"/>
+                <circle cx="9" cy="13" r="1.2" fill="currentColor"/><circle cx="15" cy="13" r="1.2" fill="currentColor"/>
+                <path d="M2 12v3M22 12v3"/>
+            </symbol>
+            <symbol id="i-user" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/>
+            </symbol>
+            <symbol id="i-docs" viewBox="0 0 24 24">
+                <rect x="3" y="6" width="12" height="15" rx="2.5" fill="url(#gPurple)" opacity="0.65"/>
+                <rect x="8" y="3" width="12" height="15" rx="2.5" fill="url(#gPurple)"/>
+            </symbol>
+            <symbol id="i-chat" viewBox="0 0 24 24">
+                <path d="M12 3C6.5 3 2.5 6.6 2.5 11c0 2.2 1 4.2 2.7 5.6L4.5 21l4.4-2.2c1 .3 2 .4 3.1.4 5.5 0 9.5-3.6 9.5-8S17.5 3 12 3z" fill="url(#gPurple)"/>
+            </symbol>
+            <symbol id="i-file" viewBox="0 0 24 24">
+                <path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="url(#gPurple)"/>
+                <path d="M14 2v6h6" fill="#fff" opacity="0.35"/>
+                <path d="M8 13h8M8 17h6" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+            </symbol>
+            <symbol id="i-upload" viewBox="0 0 48 48">
+                <path d="M12 4h17l10 10v26a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" fill="url(#gPurple)"/>
+                <path d="M29 4v10h10" fill="#fff" opacity="0.3"/>
+                <circle cx="34" cy="35" r="10" fill="#241a55" stroke="#a78bfa" stroke-width="2"/>
+                <path d="M34 40V30m0 0-4 4m4-4 4 4" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </symbol>
+            <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/>
+            </symbol>
+            <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>
+            </symbol>
+        </defs>
+    </svg>
+
+    <div class="container">
+        <header>
+            <div class="title">
+                <div class="logo"><svg><use href="#i-bot"/></svg></div>
+                <span class="text">AI Knowledge Assistant</span>
+            </div>
+            <p class="subtitle">Upload documents, ask questions, get intelligent answers</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Panel: Document Management -->
+            <div class="card">
+                <h2><svg><use href="#i-docs"/></svg> Documents</h2>
+
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon"><svg><use href="#i-upload"/></svg></div>
+                    <p><strong>Drag &amp; Drop</strong> or <strong>Click to Upload</strong></p>
+                    <p class="hint">PDF or TXT files (max 16MB)</p>
+                    <input type="file" id="fileInput" accept=".pdf,.txt">
+                </div>
+
+                <button class="btn btn-clear" onclick="clearAllDocuments()">
+                    <svg><use href="#i-trash"/></svg> Clear All Documents
+                </button>
+
+                <div id="status"></div>
+
+                <div class="documents-list" id="documentsList">
+                    <p class="empty">No documents uploaded yet</p>
+                </div>
+            </div>
+
+            <!-- Right Panel: Chat Interface -->
+            <div class="card">
+                <h2><svg><use href="#i-chat"/></svg> Ask Questions</h2>
+
+                <div class="chat-container">
+                    <div class="messages" id="messages"></div>
+
+                    <div class="input-area">
+                        <input
+                            type="text"
+                            id="questionInput"
+                            placeholder="Ask a question about your documents..."
+                            onkeypress="handleKeyPress(event)"
+                        >
+                        <button class="btn" onclick="askQuestion()" id="askBtn">
+                            <svg><use href="#i-send"/></svg> Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5002';
+        const WELCOME = "👋 Hello! Upload some documents and I'll help you find answers from them. Ask me anything about your uploaded content!";
+        const SEND_HTML = '<svg><use href="#i-send"/></svg> Send';
+
+        // Upload Zone Instructions
+
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput')
+
+        uploadZone.addEventListener('click', ()=> fileInput.click())
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        async function handleFileUpload(file){
+            const formData = new FormData()
+            formData.append("file",file)
+
+            showStatus("Uploading and Processing Document....",'info')
+            try{
+                const response = await fetch(`${API_URL}/upload`,
+                    {
+                        method: "POST",
+                        body: formData
+                    });
+                const data = await response.json()
+
+                if(response.ok){
+                    showStatus(`${data.filename} uploaded successfully`,'success');
+                    loadDocuments()
+                    fileInput.value=''
+                }
+                else{
+                    showStatus(`Error: ${data.error}`,'error')
+                }
+            }
+            catch(error){
+                showStatus(`Error: ${error.message}`,'error')
+            }
+        }
+
+        // Load Documents List
+        async function loadDocuments() {
+            try {
+                const response = await fetch(`${API_URL}/documents`);
+                const data = await response.json();
+
+                const documentsList = document.getElementById('documentsList');
+
+                if (data.documents.length === 0) {
+                    documentsList.innerHTML = '<p class="empty">No documents uploaded yet</p>';
+                } else {
+                    documentsList.innerHTML = data.documents.map(doc => `
+                        <div class="document-item">
+                            <div class="document-info">
+                                <svg><use href="#i-file"/></svg>
+                                <div>
+                                    <div class="document-name">${escapeHtml(doc.name)}</div>
+                                    <div class="document-size">${formatBytes(doc.size)}</div>
+                                </div>
+                            </div>
+                            <button class="delete-btn" onclick="deleteDocument(decodeURIComponent('${encodeURIComponent(doc.name)}'))">Delete</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading documents:', error);
+            }
+        }
+
+        // Delete Document
+        async function deleteDocument(filename) {
+            if (!confirm(`Delete ${filename}?`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/delete/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showStatus(`✅ ${filename} deleted`, 'success');
+                    loadDocuments();
+                } else {
+                    showStatus(`❌ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Clear All Documents
+        async function clearAllDocuments() {
+            if (!confirm('Delete all documents? This cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/clear`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showStatus('✅ All documents cleared', 'success');
+                    loadDocuments();
+                    document.getElementById('messages').innerHTML = '';
+                    addMessage(WELCOME, 'assistant');
+                } else {
+                    showStatus(`❌ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Ask Question
+        async function askQuestion() {
+            const questionInput = document.getElementById('questionInput');
+            const question = questionInput.value.trim();
+
+            if (!question) return;
+
+            // Add user message
+            addMessage(question, 'user');
+            questionInput.value = '';
+
+            // Disable button
+            const askBtn = document.getElementById('askBtn');
+            askBtn.disabled = true;
+            askBtn.innerHTML = '<div class="loading"></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage(data.answer, 'assistant', data.sources);
+                } else {
+                    addMessage(`❌ Error: ${data.error}`, 'assistant');
+                }
+            } catch (error) {
+                addMessage(`❌ Error: ${error.message}`, 'assistant');
+            } finally {
+                askBtn.disabled = false;
+                askBtn.innerHTML = SEND_HTML;
+            }
+        }
+
+        // Add Message to Chat
+        function addMessage(content, sender, sources = null) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            let sourcesHtml = '';
+            if (sources && sources.length > 0) {
+                const uniqueSources = [...new Set(sources)].map(s => escapeHtml(s.split(/[\\/]/).pop()));
+                sourcesHtml = `<div class="sources">📚 Sources: ${uniqueSources.join(', ')}</div>`;
+            }
+
+            const icon = sender === 'user' ? 'i-user' : 'i-bot';
+            messageDiv.innerHTML = `
+                <div class="avatar"><svg><use href="#${icon}"/></svg></div>
+                <div class="message-content">${escapeHtml(content)}${sourcesHtml}</div>
+            `;
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
+        }
+
+        // Handle Enter Key
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                askQuestion();
+            }
+        }
+
+        // Show Status Message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Format Bytes
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Initial state
+        addMessage(WELCOME, 'assistant');
+        window.addEventListener('load', loadDocuments);
+    </script>
+</body>
+</html>
